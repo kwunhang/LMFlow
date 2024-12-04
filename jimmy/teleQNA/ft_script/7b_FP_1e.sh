@@ -1,13 +1,14 @@
 #!/bin/bash
 # Please run this script under ${project_id} in project directory of
+#   https://github.com/shizhediao/llm-ft
+#     COMMIT: d5fecf30ba8011067b10cf51fede53a5ab6574e4
 
 # Parses arguments
-model_name_or_path=/ssddata/jimmy/model/Qwen1.5-14B-Chat 
-dataset_path=/ssddata/cug-llm-data/sft_qwen2
-conversation_template=qwen
-output_dir=/ssddata/jimmy/sft-model/sft-loraft-Qwen1.5-14B-Chat
-lora_model_path=/ssddata/jimmy/lora/loraft-Qwen1.5-14B-Chat
+model_name_or_path=/ssddata/jimmy/model/Qwen2.5-7B-Instruct
+dataset_path=/ssddata/cug-llm-data/sft_teleQNA
+output_dir=/ssddata/jimmy/teleQNA-arena/7b_FP_1e
 deepspeed_args="--master_port=11000"
+conversation_template=qwen
 
 # Safety related arguments
 trust_remote_code=0
@@ -23,12 +24,12 @@ while [[ $# -ge 1 ]]; do
       dataset_path="$2"
       shift
       ;;
-    --conversation_template)
-      conversation_template="$2"
+    -o|--output_model_path)
+      output_dir="$2"
       shift
       ;;
-    -o|--output_lora_path)
-      output_dir="$2"
+    --conversation_template)
+      conversation_template="$2"
       shift
       ;;
     --deepspeed_args)
@@ -47,34 +48,32 @@ while [[ $# -ge 1 ]]; do
 done
 
 # Finetune
-exp_id=finetune_with_lora
+exp_id=finetune
 project_dir=$(cd "$(dirname $0)"/..; pwd)
 log_dir=${project_dir}/log/${exp_id}
 mkdir -p ${output_dir} ${log_dir}
 
-deepspeed ${deepspeed_args} \
+deepspeed --include localhost:0,1 ${deepspeed_args} \
   examples/finetune.py \
     --model_name_or_path ${model_name_or_path} \
-    --lora_model_path ${lora_model_path} \
     --trust_remote_code ${trust_remote_code} \
     --dataset_path ${dataset_path} \
-    --conversation_template ${conversation_template} \
     --output_dir ${output_dir} --overwrite_output_dir \
+    --conversation_template ${conversation_template} \
     --num_train_epochs 1 \
-    --learning_rate 1e-4 \
-    --block_size 512 \
-    --per_device_train_batch_size 1 \
-    --use_lora 1 \
-    --lora_r 8 \
-    --save_aggregated_lora 0\
-    --deepspeed configs/ds_config_zero2.json \
+    --learning_rate 2e-5 \
+    --disable_group_texts 1 \
+    --block_size 256 \
+    --per_device_train_batch_size 16 \
+    --gradient_checkpointing 1 \
+    --deepspeed configs/ds_config_zero3.json \
     --fp16 \
-    --run_name ${exp_id} \
+    --run_name finetune \
     --validation_split_percentage 0 \
     --logging_steps 20 \
     --do_train \
     --ddp_timeout 72000 \
     --save_steps 5000 \
     --dataloader_num_workers 1 \
-    | tee ${log_dir}/train.log \
-    2> ${log_dir}/train.err
+    > >(tee ${log_dir}/train.log) \
+    2> >(tee ${log_dir}/train.err >&2)

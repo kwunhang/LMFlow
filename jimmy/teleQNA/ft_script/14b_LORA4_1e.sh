@@ -2,11 +2,11 @@
 # Please run this script under ${project_id} in project directory of
 
 # Parses arguments
-model_name_or_path=/ssddata/jimmy/ft-model/loraft-Qwen1.5-14B-Chat
-dataset_path=/ssddata/cug-llm-data/sft_qwen2
+model_name_or_path=/ssddata/jimmy/model/Qwen2.5-14B-Instruct
+dataset_path=/ssddata/cug-llm-data/sft_teleQNA
 conversation_template=qwen
-output_dir=/ssddata/jimmy/sft-model_2/sft2-loraft-Qwen1.5-14B-Chat
-deepspeed_args="--master_port=11000"
+output_dir=/ssddata/jimmy/teleQNA-arena/14b_LORA4_1e
+deepspeed_args="--master_port=11002"
 
 # Safety related arguments
 trust_remote_code=0
@@ -51,7 +51,7 @@ project_dir=$(cd "$(dirname $0)"/..; pwd)
 log_dir=${project_dir}/log/${exp_id}
 mkdir -p ${output_dir} ${log_dir}
 
-deepspeed ${deepspeed_args} \
+deepspeed --include localhost:2,3 ${deepspeed_args} \
   examples/finetune.py \
     --model_name_or_path ${model_name_or_path} \
     --trust_remote_code ${trust_remote_code} \
@@ -61,10 +61,10 @@ deepspeed ${deepspeed_args} \
     --num_train_epochs 1 \
     --learning_rate 1e-4 \
     --block_size 512 \
-    --per_device_train_batch_size 8 \
-    --gradient_checkpointing \
+    --per_device_train_batch_size 16 \
+    --gradient_checkpointing 1 \
     --use_lora 1 \
-    --lora_r 16 \
+    --lora_r 4 \
     --save_aggregated_lora 1\
     --deepspeed configs/ds_config_zero2.json \
     --fp16 \
@@ -74,6 +74,6 @@ deepspeed ${deepspeed_args} \
     --do_train \
     --ddp_timeout 72000 \
     --save_steps 5000 \
-    --dataloader_num_workers 8 \
+    --dataloader_num_workers 4 \
     | tee ${log_dir}/train.log \
     2> ${log_dir}/train.err
