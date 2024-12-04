@@ -107,13 +107,38 @@ Our package has been tested on Linux OS (Ubuntu 20.04). Other OS platforms (MacO
 CUDA versions 10.3-11.7 are supported in versions `v0.0.5` or older. For CUDA versions greater than 11.7, one can use our stable branch `>= v0.0.6`.
 
 ```bash
-git clone -b v0.0.8 https://github.com/OptimalScale/LMFlow.git
+git clone -b v0.0.9 https://github.com/OptimalScale/LMFlow.git
 cd LMFlow
 conda create -n lmflow python=3.9 -y
 conda activate lmflow
 conda install mpi4py
-bash install.sh
+pip install -e .
 ```
+
+> [!TIP]
+> We use WandB to track and visualize the training process by default. Before running the training scripts, users may need to log in to WandB using the command: 
+>```bash
+>wandb login
+>```
+> For detailed instructions, refer to the [WandB Quickstart Guide](https://docs.wandb.ai/quickstart/). Step 1 (registration) and Step 2 (login using your WandB API key) should be sufficient to set up your environment.
+>
+> <details><summary>Disabling wandb</summary>  
+>
+> One can disable wandb by either:  
+>
+> 1. Adding environment variable before running the training command.
+>
+>```bash
+>export WANDB_MODE=disabled
+>```
+>
+> 2. OR, specifying the integrations to report the results and logs to. In the training script, add:
+>
+>```bash
+>--report_to none \
+>```
+>
+> </details>
 
 ### Prepare Dataset
 
